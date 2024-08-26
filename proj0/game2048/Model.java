@@ -5,7 +5,7 @@ import java.util.Observable;
 
 
 /** The state of a game of 2048.
- *  @author TODO: YOUR NAME HERE
+ *  @author Slowist_Lee
  */
 public class Model extends Observable {
     /** Current contents of the board. */
@@ -106,18 +106,123 @@ public class Model extends Observable {
      *    value, then the leading two tiles in the direction of motion merge,
      *    and the trailing tile does not.
      * */
+    public boolean CheckNullCol(int col){
+        for (int row=0;row<board.size();row++){
+            if (board.tile(col,row)!=null) {
+                return false;
+            }
+        }
+        return true;
+    }
+    public int CheckUntilNotNull(int col,int row){
+        Board b=this.board;
+        int r=row;
+        while(r<b.size()-1){
+            r++;
+            if (b.tile(col,r)!=null){
+                break;
+            }
+        }
+        return r;
+    }
+    public int MoveToSpace(int col,int row,int NotNullRow){
+        Tile t = board.tile(col,row);
+        board.move(col,NotNullRow,t);
+        return row-1;
+    }
+    public boolean OneMoveOnCol(int col){
+        int row=board.size()-1;
+        boolean BoolMove=false;
+        boolean[] BoolMerge = new boolean[board.size()];
+        while(row>=0){
+            if (board.tile(col,row)!=null){
+                int NotNullRow = CheckUntilNotNull(col,row);
+                if(NotNullRow==(board.size()-1)&&board.tile(col,NotNullRow)==null){
+                    row=MoveToSpace(col,row,NotNullRow);
+                    BoolMove=true;
+                }
+                else if (NotNullRow!=row && board.tile(col,NotNullRow).value()==board.tile(col,row).value()){
+                    if (!BoolMerge[NotNullRow]){
+                        Tile t = board.tile(col,row);
+                        board.move(col,NotNullRow,t);
+                        row=row-1;
+                        score += board.tile(col,NotNullRow).value();
+                        BoolMove=true;
+                        BoolMerge[NotNullRow]=true;
+                    }
+                    else{
+                        NotNullRow=NotNullRow-1;
+                        row=MoveToSpace(col,row,NotNullRow);
+                        BoolMove=true;
+                    }
+                }
+                else if(NotNullRow>row+1){
+                    row=MoveToSpace(col,row,NotNullRow-1);
+                    BoolMove=true;
+                }
+                else{
+                    row=row-1;
+                    BoolMove=false;
+                }
+            }
+            else{
+                row=row-1;
+            }
+        }
+        return BoolMove;
+    }
+    public boolean UpMethod(){
+        boolean BoolChanged = false;
+
+        Board b=this.board;
+        for (int col=0; col<b.size();col++){
+            if (!CheckNullCol(col)){
+                if(OneMoveOnCol(col)){
+                    BoolChanged=true;
+                }
+            }
+        }
+        return BoolChanged;
+    }
     public boolean tilt(Side side) {
         boolean changed;
         changed = false;
-
+        if (side == Side.NORTH){ //UP ONLY
+            changed=UpMethod();
+            if (changed) {
+                setChanged();
+            }
+        }
+        else if (side == Side.WEST){ //UP ONLY
+            board.setViewingPerspective(Side.WEST);
+            changed=UpMethod();
+            board.setViewingPerspective(Side.NORTH);
+            if (changed) {
+                setChanged();
+            }
+        }
+        else if (side == Side.EAST){ //UP ONLY
+            board.setViewingPerspective(Side.EAST);
+            changed=UpMethod();
+            board.setViewingPerspective(Side.NORTH);
+            if (changed) {
+                setChanged();
+            }
+        }
+        else if (side == Side.SOUTH){ //UP ONLY
+            board.setViewingPerspective(Side.SOUTH);
+            changed=UpMethod();
+            board.setViewingPerspective(Side.NORTH);
+            if (changed) {
+                setChanged();
+            }
+        }
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
 
         checkGameOver();
-        if (changed) {
-            setChanged();
-        }
+
         return changed;
     }
 
@@ -137,7 +242,14 @@ public class Model extends Observable {
      *  Empty spaces are stored as null.
      * */
     public static boolean emptySpaceExists(Board b) {
-        // TODO: Fill in this function.
+        int s=b.size();
+        for (int row=0;row<s;row++){
+            for (int col=0;col<s;col++){
+                if (b.tile(row,col)==null){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -147,7 +259,14 @@ public class Model extends Observable {
      * given a Tile object t, we get its value with t.value().
      */
     public static boolean maxTileExists(Board b) {
-        // TODO: Fill in this function.
+        int s=b.size();
+        for (int row=0;row<s;row++){
+            for (int col=0;col<s;col++){
+                if (b.tile(row,col)!=null && b.tile(row,col).value()==MAX_PIECE){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -158,7 +277,25 @@ public class Model extends Observable {
      * 2. There are two adjacent tiles with the same value.
      */
     public static boolean atLeastOneMoveExists(Board b) {
-        // TODO: Fill in this function.
+        int s=b.size();
+        if (emptySpaceExists(b)){
+            return true;
+        }
+        for (int col=0;col<s-1;col++){
+            for (int row=0;row<s-1;row++){
+                if (b.tile(col,row).value()==b.tile(col+1,row).value()||b.tile(col,row).value()==b.tile(col,row+1).value()){
+                    return true;
+                }
+            }
+            if (b.tile(col,s-1).value()==b.tile(col+1,s-1).value()){
+                return true;
+            }
+        }
+        for (int row=0;row<s-1;row++){
+            if (b.tile(s-1,row).value()==b.tile(s-1,row+1).value()){
+                return true;
+            }
+        }
         return false;
     }
 
